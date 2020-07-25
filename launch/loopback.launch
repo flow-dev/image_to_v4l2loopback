@@ -3,11 +3,12 @@
   <arg name="device" default="/dev/video1" />
   <arg name="width" default="640" />
   <arg name="height" default="480" />
-  <arg name="format" default="YV12" />
+  <! -- mono can read format "YUYV" -->
+  <arg name="format" default="YUYV" />
 
-  <node name="image_loopback" pkg="image_to_v4l2loopback" type="stream"
-    output="screen"
-    required="true" >
+  <node name="image_loopback" pkg="image_to_v4l2loopback" type="stream" output="screen" required="true" >
+    <! -- remap from image to your ros topic name -->
+    <remap from="image" to="/live_ar/chroma_key" />
     <param name="device" value="$(arg device)" />
     <param name="width" value="$(arg width)" />
     <param name="height" value="$(arg height)" />
