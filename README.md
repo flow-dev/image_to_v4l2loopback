@@ -121,3 +121,88 @@ lcov --path . --directory . --capture --output-file coverage.info
 lcov --remove coverage.info 'tests/*' '/usr/*' '/opt/*' --output-file coverage.info
 lcov --list coverage.info
 ```
+
+## From image _to_v4l2loopback to momo
+
+### catkin build
+
+```bash
+cd ~/catkin_ws/src
+git clone https://github.com/flow-dev/image_to_v4l2loopback
+cd ..
+catkin build image_to_v4l2loopback
+```
+
+### install v4l2loopback
+
+```bash
+sudo apt-get install v4l2loopback-* # ->便利ツール等まとめて一旦インストール
+git clone https://github.com/umlaeute/v4l2loopback.git # ->v4l2loopbackだけ最新持ってきてmake
+cd v4l2loopback
+make
+sudo insmod v4l2loopback.ko exclusive_caps=1 video_nr=1 card_label="Fake" # ->insmodでv4l2loopbackを/dev/video1として実体化
+
+# insmodを取り消すときは...
+sudo rmmod v4l2loopback
+```
+
+### /dev/video1の仮想化ができてるか確認
+
+```bash
+# /dev/video1の仮想化ができてるか確認
+v4l2-ctl -D -d /dev/video1
+Driver Info (not using libv4l2):
+    Driver name   : v4l2 loopback
+    Card type     : Dummy video device (0x0000)
+    Bus info      : v4l2loopback:0
+    ******
+```
+
+### roslaunchでimage_to_v4l2loopbackを起動
+
+```bash
+roslaunch image_to_v4l2loopback loopback.launch
+```
+
+* loopback.launchの解説
+* 先に配信したいtopicを起動した後で,loopback.launchした(あまり順番は関係なさそうだが)
+
+```xml
+<?xml version="1.0"?>
+<launch>
+  <arg name="device" default="/dev/video1" />
+  <arg name="width" default="640" />
+  <arg name="height" default="480" />
+  <! -- monoはデフォルトだと"YUYV"しか受け付けない　TODO:momo側の設定確認 -->
+  <! -- width,height,formatの変換をopencvでやってるので遅いかも　TODO:image_to_v4l2loopbackのsrc確認 -->
+  <arg name="format" default="YUYV" />
+
+  <node name="image_loopback" pkg="image_to_v4l2loopback" type="stream" output="screen" required="true" >
+    <! -- 任意のTopic名をremapすればOK. sensor/Image型のみ配信可能 -->
+    <remap from="image" to="/live_ar/chroma_key" />
+    <param name="device" value="$(arg device)" />
+    <param name="width" value="$(arg width)" />
+    <param name="height" value="$(arg height)" />
+    <param name="format" value="$(arg format)" />
+  </node>
+</launch>
+```
+
+### momoの起動
+
+* 以下のXavierNX用を持ってきた
+* https://github.com/shiguredo/momo/releases/download/2020.8/momo-2020.8_ubuntu-18.04_armv8_jetson_xavier.tar.gz
+* 圧縮を展開したのち
+
+```bash
+# momoを/dev/video1指定して起動
+./momo --no-audio-device --video-device /dev/video1 test
+```
+
+```bash
+# chromeでtest.html立ち上げ
+localhost:8080/html/test.html
+# あとはH264なりVP9なりを選択して"conect"でブラウザに画像出る
+```
+
+以上
