@@ -205,4 +205,29 @@ localhost:8080/html/test.html
 # あとはH264なりVP9なりを選択して"conect"でブラウザに画像出る
 ```
 
+### RasPi3 memo
+
+```bash
+sudo apt-get install v4l2loopback-*
+sudo apt-get remove v4l2loopback-dims #古い
+
+git clone https://github.com/umlaeute/v4l2loopback.git # ->v4l2loopbackだけ最新持ってきてmake
+cd v4l2loopback
+make
+sudo insmod v4l2loopback.ko exclusive_caps=1 video_nr=1 card_label="Fake" # ->insmodでv4l2loopbackを/dev/video1として実体化
+
+git clone https://github.com/gonzalo/gphoto2-updater.git
+cd gphoto2-updater
+sudo ./gphoto2-updater.sh
+# develop versionをインストール選択する 1)
+
+gphoto2 --stdout --capture-movie | ffmpeg -i - -vcodec rawvideo -pix_fmt yuv420p -threads 0 -f v4l2 /dev/video1
+
+./momo --no-audio-device --video-device /dev/video1 test
+
+localhost:8080/html/test.html
+```
+
+
+
 以上
